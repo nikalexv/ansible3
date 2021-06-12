@@ -1,0 +1,34 @@
+---
+- name: Add repository PostgreSQL key
+  apt_key:
+    url: http://www.postgresql.org/media/keys/ACCC4CF8.asc
+
+- name: Add PostgreSQL repository
+  apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+
+- name: Install PostgreSQL
+  apt:
+    name:
+      - "postgresql-{{ postgres_version }}"
+      - "postgresql-client-{{ postgres_version }}"
+        #update_cache: yes
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Copy PostgreSQL configuration file
+  template:
+    src: postgresql.conf.j2
+    dest: /etc/postgresql/postgresql.conf
+    owner: postgres
+    mode: 0644
+
+- name: Connect to test database and remove an existing user's password postgresql_user
+  postgresql_user:
+    db: "{{ postgres_database_name }}"
+    user: postgres
+    password: "{{ postgres_pass }}"
+  notify: restart postgresql
+
+  handlers:
+   - name: restart postgresql
+     service: name=postgresql state=restarted
